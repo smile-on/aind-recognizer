@@ -18,7 +18,7 @@ class ModelSelector(object):
                  min_n_components=2, max_n_components=10,
                  random_state=14, verbose=False):
         self.words = all_word_sequences
-        self.hwords = all_word_Xlengths
+        self.hwords = all_word_Xlengths # 
         self.sequences = all_word_sequences[this_word]
         self.X, self.lengths = all_word_Xlengths[this_word]
         self.this_word = this_word
@@ -75,9 +75,30 @@ class SelectorBIC(ModelSelector):
         :return: GaussianHMM object
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        best_model = None 
+        best_score = 1e6
+        for num_components in range(self.min_n_components, self.max_n_components+1):
+            model = self.base_model(num_components)
+            if model:
+                try:
+                    logL = model.score(self.X, self.lengths)
+                    # total data points in all training samples used by this model
+                    num_data_points = len(self.X)
+                    # number of free parameters
+                    n = model.n_components
+                    transition_probs = n * (n - 1) # fully connected HMM 
+                    emission_probs = model.means_.size + np.count_nonzero(model.covars_) #  means + covars 
+                    num_parameters = transition_probs + emission_probs 
+                    # BIC = -2 * logL + p * log(N)
+                    score = -2 * logL + num_parameters * math.log(num_data_points)
+                    if self.verbose:
+                        print(f'bic {score} at {num_components}')
+                    if score < best_score: # BIC optimality at minimum score
+                        best_score = score
+                        best_model = model
+                except ValueError: # rows of transmat_ must sum to 1.0 (got [ 1.  1.  1.  0.  1.])
+                    break
+        return best_model
 
 
 class SelectorDIC(ModelSelector):
@@ -85,15 +106,36 @@ class SelectorDIC(ModelSelector):
 
     Biem, Alain. "A model selection criterion for classification: Application to hmm topology optimization."
     Document Analysis and Recognition, 2003. Proceedings. Seventh International Conference on. IEEE, 2003.
-    http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.58.6208&rep=rep1&type=pdf
-    DIC = log(P(X(i)) - 1/(M-1)SUM(log(P(X(all but i))
+    DIC = log(P(X(i)) - 1/(M-1) SUM(log(P(X(all but i))
     '''
 
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        best_model = None
+        best_score = -1e6
+        for num_components in range(self.min_n_components, self.max_n_components+1):
+            model = self.base_model(num_components) # train a classifier for self.this_word 
+            if model:
+                try:
+                    # positive score on trained category = log(P(X(i))
+                    logL_pos = model.score(self.X, self.lengths) # self.this_word
+                    # negative score on incorrect classification = 1/(M-1) SUM(log(P(X(all but i))
+                    other_words = [w for w in self.words.keys() if w != self.this_word]
+                    neg_scores = []
+                    for w in other_words:
+                        X, lengths = self.hwords[w]
+                        neg_scores.append(model.score(X, lengths))
+                    logL_neg = np.mean(neg_scores)
+                    # DIC = log(P(X(i)) - 1/(M-1) SUM(log(P(X(all but i))
+                    score = logL_pos - logL_neg 
+                    if self.verbose:
+                        print(f'dic {score} at {num_components} with pos {logL_pos} neg {logL_neg}')
+                    if score > best_score: # DIC optimality at maximum score
+                        best_score = score
+                        best_model = model
+                except ValueError: # rows of transmat_ must sum to 1.0 (got [ 1.  1.  1.  0.  1.])
+                    break 
+        return best_model
 
 
 class SelectorCV(ModelSelector):

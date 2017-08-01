@@ -17,9 +17,15 @@ This project requires **Python 3** and the following Python libraries installed:
 Notes: 
 1. It is highly recommended that you install the [Anaconda](http://continuum.io/downloads) distribution of Python and load the environment included in the "Your conda env for AI ND" lesson.
 2. The most recent development version of hmmlearn, 0.2.1, contains a bugfix related to the log function, which is used in this project.  In order to install this version of hmmearn, install it directly from its repo with the following command from within your activated Anaconda environment:
+1. Source build, get C++ build toolchain and
 ```sh
 pip install git+https://github.com/hmmlearn/hmmlearn.git
 ```
+
+2. install Precompiled binary wheel
+download the appropriate hmmlearn-0.2.1-yourpythonwindows.whl file from [here](http://www.lfd.uci.edu/~gohlke/pythonlibs/#hmmlearn)
+install with pip install hmmlearn-0.2.1-yourpythonwindows.whl.
+
 
 ### Code
 
