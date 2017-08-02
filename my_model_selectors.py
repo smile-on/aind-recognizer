@@ -18,8 +18,8 @@ class ModelSelector(object):
                  min_n_components=2, max_n_components=10,
                  random_state=14, verbose=False):
         self.words = all_word_sequences
-        self.hwords = all_word_Xlengths # 
-        self.sequences = all_word_sequences[this_word]
+        self.hwords = all_word_Xlengths # dic{word: (X, Lengths)}
+        self.sequences = all_word_sequences[this_word] 
         self.X, self.lengths = all_word_Xlengths[this_word]
         self.this_word = this_word
         self.n_constant = n_constant
@@ -76,7 +76,7 @@ class SelectorBIC(ModelSelector):
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         best_model = None 
-        best_score = 1e6
+        best_score = float("+Inf")
         for num_components in range(self.min_n_components, self.max_n_components+1):
             model = self.base_model(num_components)
             if model:
@@ -112,7 +112,7 @@ class SelectorDIC(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         best_model = None
-        best_score = -1e6
+        best_score = float("-Inf")
         for num_components in range(self.min_n_components, self.max_n_components+1):
             model = self.base_model(num_components) # train a classifier for self.this_word 
             if model:
@@ -144,7 +144,31 @@ class SelectorCV(ModelSelector):
     '''
 
     def select(self):
+        default_folds = 3
+        num_sequences = len(self.sequences) # for given word 
+        n_splits = min(default_folds, num_sequences) 
+        if n_splits < 2:
+            raise ValueError(f'CV selector needs at least 2 data sequences for {self.this_word}, got {n_splits}')
+        kfold = KFold(n_splits)
         warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-        # TODO implement model selection using CV
-        raise NotImplementedError
+        best_model = None
+        best_score = float("-Inf")
+        for num_components in range(self.min_n_components, self.max_n_components+1):
+            try:
+                scores = []
+                for cv_train_idx, cv_test_idx in kfold.split(self.sequences):
+                    train_X, train_lengths = combine_sequences(cv_train_idx, self.sequences)
+                    model = GaussianHMM(n_components=num_components, covariance_type="diag", n_iter=1000,
+                                        random_state=self.random_state, verbose=False
+                                       ).fit(train_X, train_lengths)
+                    test_X, test_lengths = combine_sequences(cv_test_idx, self.sequences)
+                    scores.append(model.score(test_X, test_lengths)) 
+                score = np.mean(scores)
+                if self.verbose:
+                    print(f'cv {score} at {num_components} with min {np.min(scores)} max {np.max(scores)}')
+                if score > best_score: # CV optimality at maximum score
+                    best_score = score
+                    best_model = model
+            except ValueError: # rows of transmat_ must sum to 1.0 (got [ 1.  1.  1.  0.  1.])
+                break 
+        return best_model
