@@ -92,7 +92,7 @@ class SelectorBIC(ModelSelector):
                     # BIC = -2 * logL + p * log(N)
                     score = -2 * logL + num_parameters * math.log(num_data_points)
                     if self.verbose:
-                        print(f'bic {score} at {num_components}')
+                        print(f'bic {score:+.1f} at {num_components}')
                     if score < best_score: # BIC optimality at minimum score
                         best_score = score
                         best_model = model
@@ -129,7 +129,7 @@ class SelectorDIC(ModelSelector):
                     # DIC = log(P(X(i)) - 1/(M-1) SUM(log(P(X(all but i))
                     score = logL_pos - logL_neg 
                     if self.verbose:
-                        print(f'dic {score} at {num_components} with pos {logL_pos} neg {logL_neg}')
+                        print(f'dic {score:+.1f} at {num_components:2d} with pos {logL_pos:+.1f} neg {logL_neg:+.1f}')
                     if score > best_score: # DIC optimality at maximum score
                         best_score = score
                         best_model = model
@@ -165,7 +165,7 @@ class SelectorCV(ModelSelector):
                     scores.append(model.score(test_X, test_lengths)) 
                 score = np.mean(scores)
                 if self.verbose:
-                    print(f'cv {score} at {num_components} with min {np.min(scores)} max {np.max(scores)}')
+                    print(f'cv {score:+.1f} at {num_components:2d} with min {np.min(scores):+.1f} max {np.max(scores):+.1f}')
                 if score > best_score: # CV optimality at maximum score
                     best_score = score
                     best_model = model
