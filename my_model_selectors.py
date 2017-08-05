@@ -98,6 +98,8 @@ class SelectorBIC(ModelSelector):
                         best_model = model
                 except ValueError: # rows of transmat_ must sum to 1.0 (got [ 1.  1.  1.  0.  1.])
                     break
+        if best_model == None:
+            best_model = self.base_model(self.n_constant) # dead end default
         return best_model
 
 
@@ -135,6 +137,8 @@ class SelectorDIC(ModelSelector):
                         best_model = model
                 except ValueError: # rows of transmat_ must sum to 1.0 (got [ 1.  1.  1.  0.  1.])
                     break 
+        if best_model == None:
+            best_model = self.base_model(self.n_constant) # dead end default
         return best_model
 
 
@@ -148,7 +152,8 @@ class SelectorCV(ModelSelector):
         num_sequences = len(self.sequences) # for given word 
         n_splits = min(default_folds, num_sequences) 
         if n_splits < 2:
-            raise ValueError(f'CV selector needs at least 2 data sequences for {self.this_word}, got {n_splits}')
+            # raise ValueError(f'CV selector needs at least 2 data sequences for {self.this_word}, got {n_splits}')
+            return self.base_model(self.n_constant) # dead end default
         kfold = KFold(n_splits)
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         best_model = None
@@ -171,4 +176,6 @@ class SelectorCV(ModelSelector):
                     best_model = model
             except ValueError: # rows of transmat_ must sum to 1.0 (got [ 1.  1.  1.  0.  1.])
                 break 
+        if best_model == None:
+            best_model = self.base_model(self.n_constant) # dead end default
         return best_model
